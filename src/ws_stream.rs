@@ -311,7 +311,19 @@ impl Sink<WsMessage> for WsStream
 				//
 				match item
 				{
-					WsMessage::Binary( d ) => self.ws.send_with_u8_array( &d ).map_err( |_| WsErr::ConnectionNotOpen )? ,
+					// WsMessage::Binary( d ) => self.ws.send_with_u8_array( &d ).map_err( |_| WsErr::ConnectionNotOpen )? ,
+					// NOTE: Thanks to the solution from @themighty1 to https://github.com/tlsnotary/tlsn-extension/issues/6 
+					WsMessage::Binary(d) => {
+			                    let buffer = ArrayBuffer::new(
+			                        d.len()
+			                        .try_into()
+			                        .expect("Message was too large to be sent."),
+			                    );
+			                    Uint8Array::new(&buffer).copy_from(d.as_slice());
+			                    self.ws
+			                        .send_with_array_buffer(&buffer)
+			                        .map_err(|_| WsErr::ConnectionNotOpen)?
+			                }
 					WsMessage::Text  ( s ) => self.ws.send_with_str     ( &s ).map_err( |_| WsErr::ConnectionNotOpen )? ,
 				}
 
